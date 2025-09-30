@@ -1,0 +1,31 @@
+# Geçici dosyalar
+*.tmp
+*.log
+*~
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Yedek dosyalar
+*_backup_*
+Quick_Backup_*
+LGS_Test_Project_Archive_*
+LGS_Test_ChatHistory_Summary_*
+LGS_Test_Complete_Backup_Report_*
+
+# IDE dosyları
+.vscode/settings.json
+.idea/
+
+# Node modules (eğer ileride kullanırsanız)
+node_modules/
+npm-debug.log*
+
+# Kişisel veriler
+test_data_backup_*
+user_data_*

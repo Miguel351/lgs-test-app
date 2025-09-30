@@ -1,0 +1,101 @@
+{
+    "name": "LGS Hazırlık Test Programı",
+    "short_name": "LGS Test",
+    "description": "LGS sınavı için kapsamlı test uygulaması - Mini Test, Kombo Rekor ve tam LGS sınavı",
+    "start_url": "/LGS_Test.html",
+    "display": "standalone",
+    "background_color": "#1e1b4b",
+    "theme_color": "#3b82f6",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "lang": "tr-TR",
+    "categories": ["education", "productivity"],
+    "icons": [
+        {
+            "src": "icon-72x72.png",
+            "sizes": "72x72",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-96x96.png",
+            "sizes": "96x96",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-128x128.png",
+            "sizes": "128x128",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-144x144.png",
+            "sizes": "144x144",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-152x152.png",
+            "sizes": "152x152",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-384x384.png",
+            "sizes": "384x384",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Mini Test",
+            "short_name": "Mini Test",
+            "description": "10 soruluk hızlı test başlat",
+            "url": "/LGS_Test.html#mini-test",
+            "icons": [
+                {
+                    "src": "icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "LGS Test",
+            "short_name": "LGS",
+            "description": "Tam LGS sınavı başlat",
+            "url": "/LGS_Test.html#lgs-test",
+            "icons": [
+                {
+                    "src": "icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "İstatistikler",
+            "short_name": "İstatistik",
+            "description": "Test sonuçlarını görüntüle",
+            "url": "/LGS_Test.html#statistics",
+            "icons": [
+                {
+                    "src": "icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ]
+}

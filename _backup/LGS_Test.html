@@ -1,0 +1,2227 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LGS Hazırlık Test Programı</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+
+    <!-- Recharts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.8.0/Recharts.js"></script>
+    
+    <!-- Babel Standalone -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.20/babel.min.js"></script>
+    
+    <!-- Embedded Excel Data (Standalone Mode) -->
+    <script src="embedded_excel_data.js"></script>
+    
+    <script>
+        Babel.registerPreset('custom', {
+            presets: [
+                [Babel.availablePresets.react]
+            ]
+        });
+    </script>
+    
+    <!-- Excel Processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+
+    <!-- PWA Support -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LGS Test">
+    <meta name="msapplication-TileColor" content="#1e1b4b">
+    <meta name="msapplication-config" content="browserconfig.xml">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icon-192x192.png">
+    
+    <script>
+    // Enhanced PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(registration => {
+                    console.log('LGS Test PWA: Service Worker registered successfully', registration.scope);
+                    
+                    // Check for updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('LGS Test PWA: New content available, please refresh');
+                                // Show update notification to user
+                                if (confirm('Yeni bir güncelleme mevcut! Uygulamayı yeniden yüklemek istiyor musunuz?')) {
+                                    window.location.reload();
+                                }
+                            }
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('LGS Test PWA: Service Worker registration failed', error);
+                });
+        });
+    }
+
+    // PWA Install Prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('LGS Test PWA: Install prompt available');
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Show custom install button
+        showInstallButton();
+    });
+
+    // Function to show install button
+    function showInstallButton() {
+        // Create install button if doesn't exist
+        if (!document.getElementById('pwa-install-btn')) {
+            const installBtn = document.createElement('button');
+            installBtn.id = 'pwa-install-btn';
+            installBtn.innerHTML = '📱 Uygulamayı Yükle';
+            installBtn.className = 'fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300 z-50';
+            installBtn.onclick = installPWA;
+            document.body.appendChild(installBtn);
+            
+            // Auto hide after 10 seconds
+            setTimeout(() => {
+                if (document.getElementById('pwa-install-btn')) {
+                    installBtn.style.display = 'none';
+                }
+            }, 10000);
+        }
+    }
+
+    // Function to install PWA
+    function installPWA() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('LGS Test PWA: User accepted install prompt');
+                } else {
+                    console.log('LGS Test PWA: User dismissed install prompt');
+                }
+                deferredPrompt = null;
+                
+                // Hide install button
+                const installBtn = document.getElementById('pwa-install-btn');
+                if (installBtn) {
+                    installBtn.remove();
+                }
+            });
+        }
+    }
+
+    // PWA installed event
+    window.addEventListener('appinstalled', (evt) => {
+        console.log('LGS Test PWA: App was installed successfully');
+        
+        // Hide install button if visible
+        const installBtn = document.getElementById('pwa-install-btn');
+        if (installBtn) {
+            installBtn.remove();
+        }
+    });
+    </script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+        }
+        
+        /* Loading animation */
+        .loading {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Fade in animation */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module" data-presets="custom">
+        const { useState, useEffect } = React;
+        const { 
+            BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+            LineChart, Line, PieChart, Pie, Cell, RadarChart, PolarGrid, 
+            PolarAngleAxis, PolarRadiusAxis, Radar 
+        } = Recharts;
+
+        // Icon Components (simplified versions)
+        const Icon = ({ name, className = "w-6 h-6", ...props }) => {
+            const icons = {
+                User: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
+                Mail: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
+                Lock: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>,
+                GraduationCap: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>,
+                Eye: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>,
+                EyeOff: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" /></svg>,
+                BookOpen: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>,
+                Target: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>,
+                Play: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" /></svg>,
+                Upload: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>,
+                CheckCircle2: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+                FileSpreadsheet: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+                Clock: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><polyline points="12,6 12,12 16,14" /></svg>,
+                ChevronLeft: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" /></svg>,
+                ChevronRight: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6" /></svg>,
+                Flag: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 2h7a2 2 0 012 2v6a2 2 0 01-2 2H12l-1-2H5a2 2 0 00-2 2z" /></svg>,
+                Home: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9,22 9,12 15,12 15,22" /></svg>,
+                RotateCcw: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M1 4v6h6" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>,
+                Zap: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10" /></svg>,
+                Trophy: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 22h16" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14.66V17a3 3 0 0 0 3 3v0a3 3 0 0 0 3-3v-2.34l1 .34H18a2 2 0 0 0 2-2V9H4v4a2 2 0 0 0 2 2h1l1-.34Z" /></svg>,
+                TrendingUp: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22,7 13.5,15.5 8.5,10.5 2,17" /><polyline points="16,7 22,7 22,13" /></svg>,
+                Calendar: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
+                Filter: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46" /></svg>,
+                AlertCircle: () => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+            };
+            
+            const IconComponent = icons[name];
+            return IconComponent ? <IconComponent {...props} /> : <div className={className}></div>;
+        };
+
+        // Main App Component
+        const LGSApp = () => {
+            const [currentPage, setCurrentPage] = useState('login');
+            const [currentUser, setCurrentUser] = useState(null);
+            const [testHistory, setTestHistory] = useState([]); // Boş başlar, useEffect'te yüklenir
+            const [loadedExcelData, setLoadedExcelData] = useState(null); // Yeni state
+
+            // Sayfa yüklendiğinde verileri localStorage'dan yükle
+            useEffect(() => {
+                // Excel verilerini yükle
+                const savedExcelData = localStorage.getItem('excelData');
+                if (savedExcelData) {
+                    const parsedData = JSON.parse(savedExcelData);
+                    setLoadedExcelData(parsedData);
+                    console.log('Kaydedilmiş Excel verileri yüklendi');
+                }
+
+                // Test geçmişini yükle
+                const savedTestHistory = localStorage.getItem('testHistory');
+                if (savedTestHistory) {
+                    const parsedHistory = JSON.parse(savedTestHistory);
+                    setTestHistory(parsedHistory);
+                    console.log('Test geçmişi yüklendi:', parsedHistory.length, 'test');
+                }
+            }, []);
+
+            // Navigation functions
+            const navigateToPage = (page) => {
+                setCurrentPage(page);
+            };
+
+            const handleLogin = (user) => {
+                setCurrentUser(user);
+                setCurrentPage('dashboard');
+            };
+
+            const handleLogout = () => {
+                setCurrentUser(null);
+                setCurrentPage('login');
+            };
+
+            const addTestResult = (result) => {
+                const newTest = {
+                    ...result,
+                    id: Date.now()
+                    // date değerini result'tan olduğu gibi kullan, ezme
+                };
+                
+                const newTestHistory = [newTest, ...testHistory];
+                setTestHistory(newTestHistory);
+                
+                // localStorage'a da kaydet
+                localStorage.setItem('testHistory', JSON.stringify(newTestHistory));
+                console.log('Yeni test sonucu kaydedildi ve localStorage güncellendi');
+            };
+
+            // Render current page
+            const renderCurrentPage = () => {
+                switch (currentPage) {
+                    case 'login':
+                        return <LoginPage onLogin={handleLogin} />;
+                    case 'dashboard':
+                        return <Dashboard user={currentUser} onNavigate={navigateToPage} onLogout={handleLogout} />;
+                    case 'test-selection':
+                        return <TestSelection 
+                            onNavigate={navigateToPage} 
+                            loadedExcelData={loadedExcelData} 
+                            setLoadedExcelData={setLoadedExcelData}
+                        />;
+                    case 'mini-test':
+                        return <MiniTest 
+                            onNavigate={navigateToPage} 
+                            onTestComplete={addTestResult} 
+                            loadedExcelData={loadedExcelData}
+                        />;
+                    case 'kombo-test':
+                        return <KomboTest 
+                            onNavigate={navigateToPage} 
+                            onTestComplete={addTestResult}
+                            loadedExcelData={loadedExcelData}
+                        />;
+                    case 'lgs-test':
+                        return <LGSTest 
+                            onNavigate={navigateToPage} 
+                            onTestComplete={addTestResult}
+                            loadedExcelData={loadedExcelData}  // Bu prop'u ekleyelim
+                        />;
+                    case 'statistics':
+                        return <Statistics 
+                            testHistory={testHistory} 
+                            setTestHistory={setTestHistory}
+                            onNavigate={navigateToPage} 
+                        />;
+                    default:
+                        return <Dashboard user={currentUser} onNavigate={navigateToPage} onLogout={handleLogout} />;
+                }
+            };
+
+            useEffect(() => {
+                const loggedInUser = localStorage.getItem('currentUser');
+                if (loggedInUser) {
+                    const user = JSON.parse(loggedInUser);
+                    setCurrentUser(user);
+                    setCurrentPage('dashboard');
+                    console.log('Oturum açık olan kullanıcı:', user);
+                }
+            }, []);
+
+            return (
+                <div className="min-h-screen">
+                    {renderCurrentPage()}
+                </div>
+            );
+        };
+
+        // Login Page Component
+        const LoginPage = ({ onLogin }) => {
+            const [isLogin, setIsLogin] = useState(true);
+            const [showPassword, setShowPassword] = useState(false);
+            const [loginData, setLoginData] = useState({ email: '', password: '' });
+            const [registerData, setRegisterData] = useState({ name: '', email: '', password: '', class: '', targetSchool: '' });
+
+            // Kayıt işlemi
+            const handleRegister = () => {
+                if (registerData.name && registerData.email && registerData.password && registerData.class) {
+                    // Mevcut kullanıcıları al
+                    const existingUsers = JSON.parse(localStorage.getItem('users')) || [];
+                    
+                    // Email kontrolü
+                    if (existingUsers.some(user => user.email === registerData.email)) {
+                        alert('Bu email adresi zaten kayıtlı!');
+                        return;
+                    }
+
+                    // Yeni kullanıcı objesi
+                    const userId = `user_${Date.now()}`; // Benzersiz ID oluştur
+                    const newUser = {
+                        id: userId,
+                        name: registerData.name,
+                        email: registerData.email,
+                        password: registerData.password,
+                        class: registerData.class,
+                        targetSchool: registerData.targetSchool
+                    };
+
+                    console.log('Yeni kullanıcı oluşturuluyor:', newUser); // Debug log
+
+                    // Kullanıcıyı kaydet
+                    existingUsers.push(newUser);
+                    localStorage.setItem('users', JSON.stringify(existingUsers));
+                    
+                    // Boş bir rekor kaydı oluştur
+                    const userRecords = JSON.parse(localStorage.getItem('userRecords')) || {};
+                    userRecords[userId] = {
+                        maxCombo: 0,
+                        date: new Date().toISOString()
+                    };
+                    localStorage.setItem('userRecords', JSON.stringify(userRecords));
+                    console.log('Kullanıcı rekor kaydı oluşturuldu:', userRecords); // Debug log
+                    
+                    // Otomatik giriş yap
+                    onLogin(newUser);
+                } else {
+                    alert('Lütfen gerekli alanları doldurun!');
+                }
+            };
+
+            // Giriş işlemi
+            const handleLogin = () => {
+                if (loginData.email && loginData.password) {
+                    // Demo hesap kontrolü
+                    if (loginData.email === 'mustafa@test.com' && loginData.password === '1') {
+                        const demoUser = {
+                            id: 'demo_user',
+                            name: 'Mustafa Emre',
+                            email: 'mustafa@test.com',
+                            class: '8',
+                            targetSchool: 'Kadıköy Atatürk Fen Lisesi'
+                        };
+                        
+                        // Demo kullanıcı için rekor kaydı oluştur
+                        const userRecords = JSON.parse(localStorage.getItem('userRecords')) || {};
+                        if (!userRecords['demo_user']) {
+                            userRecords['demo_user'] = {
+                                maxCombo: 0,
+                                date: new Date().toISOString()
+                            };
+                            localStorage.setItem('userRecords', JSON.stringify(userRecords));
+                        }
+                        
+                        // Demo kullanıcıyı localStorage'a kaydet
+                        localStorage.setItem('currentUser', JSON.stringify(demoUser));
+                        onLogin(demoUser);
+                        return;
+                    }
+
+                    // Kayıtlı kullanıcıları kontrol et
+                    const users = JSON.parse(localStorage.getItem('users')) || [];
+                    const user = users.find(u => 
+                        u.email === loginData.email && 
+                        u.password === loginData.password
+                    );
+
+                    if (user) {
+                        // Kullanıcıyı localStorage'a kaydet
+                        localStorage.setItem('currentUser', JSON.stringify(user));
+                        onLogin(user);
+                    } else {
+                        alert('Email veya şifre hatalı!');
+                    }
+                } else {
+                    alert('Lütfen email ve şifre girin!');
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-800 flex items-center justify-center p-4">
+                    <div className="max-w-md w-full fade-in">
+                        <div className="text-center mb-8">
+                            <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-2xl w-fit mx-auto mb-4">
+                                <Icon name="GraduationCap" className="w-12 h-12 text-white" />
+                            </div>
+                            <h1 className="text-3xl font-bold text-white mb-2">LGS Hazırlık</h1>
+                            <p className="text-blue-200">Test Programı</p>
+                        </div>
+
+                        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 shadow-2xl">
+                            <div className="flex mb-6 bg-white/10 rounded-xl p-1">
+                                <button
+                                    onClick={() => setIsLogin(true)}
+                                    className={`flex-1 py-3 text-center rounded-lg transition-all duration-300 ${
+                                        isLogin ? 'bg-white/20 text-white font-medium' : 'text-gray-300 hover:text-white'
+                                    }`}
+                                >
+                                    Giriş Yap
+                                </button>
+                                <button
+                                    onClick={() => setIsLogin(false)}
+                                    className={`flex-1 py-3 text-center rounded-lg transition-all duration-300 ${
+                                        !isLogin ? 'bg-white/20 text-white font-medium' : 'text-gray-300 hover:text-white'
+                                    }`}
+                                >
+                                    Kayıt Ol
+                                </button>
+                            </div>
+
+                            {isLogin ? (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-white text-sm font-medium mb-2">E-posta</label>
+                                        <div className="relative">
+                                            <Icon name="Mail" className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                                            <input
+                                                type="email"
+                                                value={loginData.email}
+                                                onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+                                                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="ornek@email.com"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-white text-sm font-medium mb-2">Şifre</label>
+                                        <div className="relative">
+                                            <Icon name="Lock" className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                value={loginData.password}
+                                                onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                                                className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="Şifrenizi girin"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-3 top-3 text-gray-400 hover:text-white"
+                                            >
+                                                <Icon name={showPassword ? "EyeOff" : "Eye"} className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={handleLogin}
+                                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105"
+                                    >
+                                        Giriş Yap
+                                    </button>
+
+                                    <p className="text-center text-gray-400 text-sm mt-4">
+                                        Demo: mustafa@test.com / 1
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-white text-sm font-medium mb-2">Ad Soyad</label>
+                                        <div className="relative">
+                                            <Icon name="User" className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                value={registerData.name}
+                                                onChange={(e) => setRegisterData({...registerData, name: e.target.value})}
+                                                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="Adınız ve soyadınız"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-white text-sm font-medium mb-2">E-posta</label>
+                                        <div className="relative">
+                                            <Icon name="Mail" className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                                            <input
+                                                type="email"
+                                                value={registerData.email}
+                                                onChange={(e) => setRegisterData({...registerData, email: e.target.value})}
+                                                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="ornek@email.com"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-white text-sm font-medium mb-2">Şifre</label>
+                                        <div className="relative">
+                                            <Icon name="Lock" className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                value={registerData.password}
+                                                onChange={(e) => setRegisterData({...registerData, password: e.target.value})}
+                                                className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="Güçlü bir şifre oluşturun"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-3 top-3 text-gray-400 hover:text-white"
+                                            >
+                                                <Icon name={showPassword ? "EyeOff" : "Eye"} className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-white text-sm font-medium mb-2">Sınıf</label>
+                                            <select
+                                                value={registerData.class}
+                                                onChange={(e) => setRegisterData({...registerData, class: e.target.value})}
+                                                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="" className="bg-gray-800">Seçin</option>
+                                                <option value="7" className="bg-gray-800">7. Sınıf</option>
+                                                <option value="8" className="bg-gray-800">8. Sınıf</option>
+                                                <option value="mezun" className="bg-gray-800">Mezun</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div>
+                                            <label className="block text-white text-sm font-medium mb-2">Hedef Okul</label>
+                                            <input
+                                                type="text"
+                                                value={registerData.targetSchool}
+                                                onChange={(e) => setRegisterData({...registerData, targetSchool: e.target.value})}
+                                                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="İsteğe bağlı"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={handleRegister}
+                                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105"
+                                    >
+                                        Kayıt Ol
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Dashboard Component
+        const Dashboard = ({ user, onNavigate, onLogout }) => {
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-800">
+                    {/* Versiyon numarası - sağ üst köşe */}
+                    <div className="absolute top-4 right-4 z-10">
+                        <span className="text-green-400 text-xs font-mono bg-black/20 px-2 py-1 rounded backdrop-blur-sm">
+                            v1.0
+                        </span>
+                    </div>
+                    
+                    <div className="container mx-auto px-4 py-8">
+                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-8 flex justify-between items-center">
+                            <div className="flex items-center space-x-4">
+                                <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-xl">
+                                    <Icon name="GraduationCap" className="w-8 h-8 text-white" />
+                                </div>
+                                <div>
+                                    <h1 className="text-2xl font-bold text-white">LGS Hazırlık Test Programı</h1>
+                                    <p className="text-blue-200">Hoş geldin, {user?.name}!</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={onLogout}
+                                className="bg-red-500/20 hover:bg-red-500/30 text-white px-4 py-2 rounded-lg transition-all duration-300"
+                            >
+                                Çıkış Yap
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                            <div 
+                                className="bg-white/10 backdrop-blur-md rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 cursor-pointer"
+                                onClick={() => onNavigate('test-selection')}
+                            >
+                                <div className="bg-green-500 p-3 rounded-lg w-fit mb-4">
+                                    <Icon name="BookOpen" className="w-6 h-6 text-white" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-white mb-2">Test Çöz</h3>
+                                <p className="text-gray-300">Yeni test başlat ve kendini dene</p>
+                            </div>
+
+                            <div 
+                                className="bg-white/10 backdrop-blur-md rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 cursor-pointer"
+                                onClick={() => onNavigate('statistics')}
+                            >
+                                <div className="bg-blue-500 p-3 rounded-lg w-fit mb-4">
+                                    <Icon name="TrendingUp" className="w-6 h-6 text-white" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-white mb-2">İstatistikler</h3>
+                                <p className="text-gray-300">Performansını analiz et</p>
+                            </div>
+
+                            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 cursor-pointer">
+                                <div className="bg-purple-500 p-3 rounded-lg w-fit mb-4">
+                                    <Icon name="Clock" className="w-6 h-6 text-white" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-white mb-2">Geçmiş Testler</h3>
+                                <p className="text-gray-300">Önceki test sonuçlarını incele</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6">
+                            <h3 className="text-xl font-semibold text-white mb-4">Profil Bilgileri</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-white/5 rounded-lg p-4">
+                                    <p className="text-gray-300 text-sm">İsim</p>
+                                    <p className="text-white font-medium">{user?.name}</p>
+                                </div>
+                                <div className="bg-white/5 rounded-lg p-4">
+                                    <p className="text-gray-300 text-sm">Sınıf</p>
+                                    <p className="text-white font-medium">{user?.class || 'Belirtilmemiş'}</p>
+                                </div>
+                                <div className="bg-white/5 rounded-lg p-4">
+                                    <p className="text-gray-300 text-sm">E-posta</p>
+                                    <p className="text-white font-medium">{user?.email}</p>
+                                </div>
+                                <div className="bg-white/5 rounded-lg p-4">
+                                    <p className="text-gray-300 text-sm">Hedef Okul</p>
+                                    <p className="text-white font-medium">{user?.targetSchool || 'Belirtilmemiş'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Test Selection Component
+        const TestSelection = ({ onNavigate, loadedExcelData, setLoadedExcelData }) => {
+            const [selectedDers, setSelectedDers] = useState('');
+            const [selectedKonular, setSelectedKonular] = useState([]);
+            const [selectedTestTuru, setSelectedTestTuru] = useState('');
+            const [excelData, setExcelData] = useState(loadedExcelData);
+            const [isDataLoaded, setIsDataLoaded] = useState(!!loadedExcelData);
+            const [availableKonular, setAvailableKonular] = useState([]); // Yeni state ekleyelim
+
+            // Mock veri - gerçek uygulamada bu veriler Excel'den veya sunucudan gelecek
+            const mockData = {
+                "Matematik": ["Doğal Sayılar", "Cebirsel ifadeler", "Eşitlik ve Denklem", "Oran-Orantı", "Yüzdeler"],
+                "Türkçe": ["Sözcük Türleri", "Cümle Öğeleri", "Noktalama İşaretleri", "Anlam Bilgisi", "Dil Bilgisi"],
+                "Fen Bilimleri": ["Kuvvet ve Hareket", "Işık", "Ses", "Madde ve Isı", "Canlılar ve Enerji"],
+                "Sosyal Bilgiler": ["Coğrafya", "Tarih", "Vatandaşlık", "Ekonomi"],
+                "Din Kültürü": ["İnanç", "İbadet", "Ahlak", "Hz.Peygamber"],
+                "İnkılap Tarihi": ["Milli Mücadele", "Atatürk İlkeleri", "Cumhuriyet Dönemi"],
+                "Yabancı Dil": ["Grammar", "Vocabulary", "Reading", "Listening"]
+            };
+
+            const dersler = Object.keys(mockData);
+            const testTurleri = [
+                { id: 'mini', name: 'Mini Test', desc: '10 soruluk hızlı test' },
+                { id: 'kombo', name: 'Kombo Rekor', desc: 'İlk yanlışa kadar devam' },
+                { id: 'lgs', name: 'LGS', desc: 'Tam LGS sınavı (90 soru)' }
+            ];
+
+            useEffect(() => {
+                if (selectedDers) {
+                    if (excelData && excelData[selectedDers]) {
+                        setAvailableKonular(excelData[selectedDers]);
+                    } else {
+                        setAvailableKonular(mockData[selectedDers] || []);
+                    }
+                    setSelectedKonular([]);
+                }
+            }, [selectedDers, excelData]);
+
+            const handleFileUpload = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const sheetName = workbook.SheetNames[0];
+                            const worksheet = workbook.Sheets[sheetName];
+                            
+                            // Raw options ekleyelim
+                            const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                                raw: false,
+                                defval: ""  // Boş hücreler için varsayılan değer
+                            });
+
+                            // İlk veriyi kontrol edelim
+                            console.log('Excel veri yapısı:', {
+                                ilkSatir: jsonData[0],
+                                sutunlar: Object.keys(jsonData[0])
+                            });
+
+                            // Resimli soruları filtrele ve kontrol et
+                            const imageQuestions = jsonData.filter(row => row.J === 'R');
+                            console.log('Resimli sorular:', imageQuestions.map(q => ({
+                                ders: q.Ders,
+                                D: q.D,
+                                J: q.J,
+                                soru: q.Soru
+                            })));
+
+                            localStorage.setItem('excelData', JSON.stringify(jsonData));
+                            setLoadedExcelData(jsonData);
+                            setExcelData(jsonData);
+                            setIsDataLoaded(true);
+
+                        } catch (error) {
+                            console.error('Excel okuma hatası:', error);
+                            alert('Excel dosyası okuma hatası! Lütfen dosya formatını kontrol edin.');
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+            };
+
+            const toggleKonu = (konu) => {
+                setSelectedKonular(prev => 
+                    prev.includes(konu) 
+                        ? prev.filter(k => k !== konu)
+                        : [...prev, konu]
+                );
+            };
+
+            const toggleAllKonular = () => {
+                if (selectedKonular.length === availableKonular.length) {
+                    setSelectedKonular([]);
+                } else {
+                    setSelectedKonular([...availableKonular]);
+                }
+            };
+
+            const canStartTest = () => {
+                // LGS testi için sadece test türü seçili olması yeterli
+                if (selectedTestTuru === 'lgs') {
+                    return true;
+                }
+                
+                // Diğer testler için eski kontroller devam etsin
+                return selectedDers && 
+                       selectedKonular.length > 0 && 
+                       selectedTestTuru;
+            };
+
+            const startTest = () => {
+                if (selectedTestTuru === 'lgs') {
+                    // Embedded LGS data'sını kullan (standalone mode)
+                    if (window.EMBEDDED_EXCEL_DATA && window.EMBEDDED_EXCEL_DATA.LGSTest) {
+                        const jsonData = window.EMBEDDED_EXCEL_DATA.LGSTest;
+                        
+                        console.log('LGS embedded data yüklendi:', {
+                            toplamSoru: jsonData.length,
+                            ornekSoru: jsonData[0]
+                        });
+
+                        // Excel verisini localStorage'a kaydet
+                        localStorage.setItem('excelData', JSON.stringify(jsonData));
+                        setLoadedExcelData(jsonData);
+                        setExcelData(jsonData);
+                        setIsDataLoaded(true);
+                        
+                        // Test sayfasına yönlendir
+                        onNavigate('lgs-test');
+                    } else {
+                        // Fallback: Excel dosyası yükleme (geliştirme modu)
+                        const fileInput = document.createElement('input');
+                        fileInput.type = 'file';
+                        fileInput.accept = '.xlsx,.xls';
+                        fileInput.onchange = async (event) => {
+                            const file = event.target.files[0];
+                            if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (e) => {
+                                    try {
+                                        const data = new Uint8Array(e.target.result);
+                                        const workbook = XLSX.read(data, { type: 'array' });
+                                        const sheetName = workbook.SheetNames[0];
+                                        const worksheet = workbook.Sheets[sheetName];
+                                        
+                                        const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                                        raw: false,
+                                            raw: false,
+                                            defval: ""
+                                        });
+
+                                        console.log('LGS Excel verisi yüklendi:', {
+                                            toplamSoru: jsonData.length,
+                                            ornekSoru: jsonData[0]
+                                        });
+
+                                        // Excel verisini localStorage'a kaydet
+                                        localStorage.setItem('excelData', JSON.stringify(jsonData));
+                                        setLoadedExcelData(jsonData);
+                                        setExcelData(jsonData);
+                                        setIsDataLoaded(true);
+                                        
+                                        // Test sayfasına yönlendir
+                                        onNavigate('lgs-test');
+
+                                    } catch (error) {
+                                        console.error('LGS Excel okuma hatası:', error);
+                                        alert('Excel dosyası okuma hatası! Lütfen dosya formatını kontrol edin.');
+                                    }
+                                };
+                                reader.readAsArrayBuffer(file);
+                            }
+                        };
+                        fileInput.click();
+                    }
+                    return;
+                }
+
+                // Diğer test türleri için kontroller
+                if (!canStartTest()) {
+                    alert('Lütfen test parametrelerini seçin!');
+                    return;
+                }
+
+                // Debug için log ekleyelim
+                console.log('Seçim Detayları:', {
+                    secilenDers: selectedDers,
+                    secilenKonular: selectedKonular,
+                });
+
+                // Excel verilerindeki konuları kontrol edelim
+                const excelKonular = [...new Set(loadedExcelData.map(q => q.Konu))];
+                console.log('Excel dosyasındaki tüm konular:', excelKonular);
+
+                // Seçilen konulara göre soruları filtrele
+                const filteredQuestions = loadedExcelData.filter(question => 
+                    question.Ders === selectedDers && 
+                    selectedKonular.includes(question.Konu)
+                );
+
+                // Filtreleme detaylarını görelim
+                console.log('Filtreleme Sonuçları:', {
+                    toplamSoruSayisi: loadedExcelData.length,
+                    derseGoreFiltrelenen: loadedExcelData.filter(q => q.Ders === selectedDers).length,
+                    konuyaGoreFiltrelenen: filteredQuestions.length,
+                    ornekSorular: filteredQuestions.slice(0, 2) // İlk 2 soruyu örnek olarak göster
+                });
+
+                localStorage.setItem('filteredQuestions', JSON.stringify(filteredQuestions));
+
+                if (filteredQuestions.length === 0) {
+                    alert('Seçilen kriterlere uygun soru bulunamadı!');
+                    return;
+                }
+
+                // Test sayfasına yönlendir
+                if (selectedTestTuru === 'mini') {
+                    onNavigate('mini-test');
+                } else if (selectedTestTuru === 'kombo') {
+                    onNavigate('kombo-test');
+                }
+            };
+
+            // Ders seçildiğinde Excel'i yükle
+            const loadExcelForSubject = async (selectedDers) => {
+                try {
+                    console.log(`${selectedDers} dersi yükleniyor...`);
+                    
+                    // 1. Önce embedded data'yı kontrol et
+                    if (window.EMBEDDED_EXCEL_DATA && window.EMBEDDED_EXCEL_DATA[selectedDers]) {
+                        const jsonData = window.EMBEDDED_EXCEL_DATA[selectedDers];
+                        console.log(`${selectedDers} embedded data'dan yüklendi:`, {
+                            toplamSoru: jsonData.length,
+                            ornekSoru: jsonData[0]
+                        });
+                        
+                        // Verileri kaydet
+                        localStorage.setItem('excelData', JSON.stringify(jsonData));
+                        setLoadedExcelData(jsonData);
+                        setExcelData(jsonData);
+                        setIsDataLoaded(true);
+                        return;
+                    }
+                    
+                    // 2. Embedded data yoksa, Live Server modunda fetch dene
+                    console.log('Embedded data bulunamadı, Excel dosyasını fetch ile deneyiyor...');
+                    
+                    const fileNameMap = {
+                        "Din Kültürü": "DinKulturu",
+                        "Fen Bilimleri": "FenBilimleri",
+                        "İnkılap Tarihi": "inkilapTarihi", 
+                        "Matematik": "Matematik",
+                        "Sosyal Bilgiler": "SosyalBilgiler",
+                        "Türkçe": "Türkçe",
+                        "Yabancı Dil": "YabancıDil"
+                    };
+
+                    const fileName = fileNameMap[selectedDers];
+                    
+                    try {
+                        const response = await fetch(`./${fileName}.xlsx`);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const arrayBuffer = await response.arrayBuffer();
+                        const data = new Uint8Array(arrayBuffer);
+                        
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                            raw: false,
+                            defval: ""
+                        });
+
+                        console.log(`${selectedDers} fetch ile yüklendi:`, {
+                            toplamSoru: jsonData.length,
+                            ornekSoru: jsonData[0]
+                        });
+
+                        // Verileri kaydet
+                        localStorage.setItem('excelData', JSON.stringify(jsonData));
+                        setLoadedExcelData(jsonData);
+                        setExcelData(jsonData);
+                        setIsDataLoaded(true);
+                        
+                    } catch (fetchError) {
+                        console.error(`Fetch hatası: ${fetchError.message}`);
+                        
+                        // 3. Her ikisi de başarısızsa, localStorage'dan eski veri dene
+                        console.log('localStorage\'dan eski veri kontrol ediliyor...');
+                        const savedData = localStorage.getItem('excelData');
+                        if (savedData) {
+                            const parsedData = JSON.parse(savedData);
+                            console.log('localStorage\'dan eski veri yüklendi:', {
+                                toplamSoru: parsedData.length
+                            });
+                            setLoadedExcelData(parsedData);
+                            setExcelData(parsedData);
+                            setIsDataLoaded(true);
+                        } else {
+                            // 4. Hiçbir veri yoksa hata göster
+                            throw new Error('Hiçbir veri kaynağı bulunamadı!');
+                        }
+                    }
+
+                } catch (error) {
+                    console.error(`${selectedDers} Excel yükleme hatası:`, error);
+                    alert(`${selectedDers} dersi için soru yüklenirken hata oluştu!\n\nHata: ${error.message}\n\nÇözüm:\n1. Live Server kullanıyor iseniz Excel dosyalarının klasörde olduğundan emin olun\n2. Standalone mod için embedded_excel_data.js dosyasının olduğundan emin olun\n3. Ya da localStorage'ı temizleyip yeniden deneyin`);
+                    setIsDataLoaded(false);
+                }
+            };            // Ders seçimini güncelle
+            const handleDersSelection = (ders) => {
+                setSelectedDers(ders);
+                loadExcelForSubject(ders);
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-800 p-4">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-8">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-4">
+                                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-xl">
+                                        <Icon name="Target" className="w-8 h-8 text-white" />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-2xl font-bold text-white">Test Seçimi</h1>
+                                        <p className="text-blue-200">Çözmek istediğin testi yapılandır</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-center space-x-4">
+                                    <button
+                                        onClick={() => onNavigate('dashboard')}
+                                        className="bg-gray-500/20 hover:bg-gray-500/30 text-gray-300 px-4 py-2 rounded-lg transition-all duration-300"
+                                    >
+                                        ← Ana Sayfa
+                                    </button>
+                                    <div className="relative">
+                                        <input
+                                            type="file"
+                                            accept=".xlsx,.xls"
+                                            onChange={handleFileUpload}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        />
+                                        <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                                            isDataLoaded ? 'bg-green-500/20 text-green-300' : 'bg-white/10 text-white hover:bg-white/20'
+                                        }`}>
+                                            <Icon name={isDataLoaded ? "CheckCircle2" : "Upload"} className="w-5 h-5" />
+                                            <span className="text-sm">
+                                                {isDataLoaded ? 'Sorular Yüklendi' : 'Excel Yükle'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {!isDataLoaded && (
+                            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
+                                <div className="flex items-start space-x-3">
+                                    <Icon name="FileSpreadsheet" className="w-5 h-5 text-yellow-400 mt-0.5" />
+                                    <div>
+                                        <h3 className="text-yellow-300 font-medium mb-2">Excel Format Örneği:</h3>
+                                        <div className="text-yellow-200 text-sm space-y-1">
+                                            <p><strong>Sütun Başlıkları:</strong> ID | Ders | Konu | Soru | A | B | C | D | DogruCevap</p>
+                                            <p><strong>Örnek:</strong> 1 | Matematik | Cebirsel İfadeler | 2x+3=7 ise x=? | 1 | 2 | 3 | 4 | B</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            <div className="lg:col-span-3">
+                                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6">
+                                    <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+                                        <Icon name="BookOpen" className="w-5 h-5 mr-2" />
+                                        Ders Seçimi
+                                    </h2>
+                                    <div className="space-y-2">
+                                        {dersler.map(ders => (
+                                            <button
+                                                key={ders}
+                                                onClick={() => handleDersSelection(ders)} // handleDersSelection kullan
+                                                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-300 ${
+                                                    selectedDers === ders
+                                                        ? 'bg-blue-500 text-white font-medium'
+                                                        : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'
+                                                }`}
+                                            >
+                                                {ders}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="lg:col-span-5">
+                                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h2 className="text-xl font-semibold text-white flex items-center">
+                                            <Icon name="CheckCircle2" className="w-5 h-5 mr-2" />
+                                            Konu Seçimi
+                                        </h2>
+                                        {availableKonular.length > 0 && (
+                                            <button
+                                                onClick={toggleAllKonular}
+                                                className="text-sm text-blue-300 hover:text-blue-200 transition-colors"
+                                            >
+                                                {selectedKonular.length === availableKonular.length ? 'Hiçbirini Seçme' : 'Tümünü Seç'}
+                                            </button>
+                                        )}
+                                    </div>
+                                    
+                                    {!selectedDers ? (
+                                        <div className="text-center text-gray-400 py-8">
+                                            <Icon name="BookOpen" className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                            <p>Önce bir ders seçin</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                                            {availableKonular.map(konu => (
+                                                <label
+                                                    key={konu}
+                                                    className="flex items-center p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300 cursor-pointer"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedKonular.includes(konu)}
+                                                        onChange={() => toggleKonu(konu)}
+                                                        className="w-4 h-4 text-blue-500 bg-white/20 border-white/30 rounded focus:ring-blue-500"
+                                                    />
+                                                    <span className="ml-3 text-white">{konu}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                    
+                                    {selectedKonular.length > 0 && (
+                                        <div className="mt-4 p-3 bg-blue-500/20 rounded-lg">
+                                            <p className="text-blue-200 text-sm">
+                                                <strong>{selectedKonular.length}</strong> konu seçildi
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="lg:col-span-4">
+                                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6">
+                                    <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+                                        <Icon name="Target" className="w-5 h-5 mr-2" />
+                                        Test Türü
+                                    </h2>
+                                    <div className="space-y-3">
+                                        {testTurleri.map(test => (
+                                            <label
+                                                key={test.id}
+                                                className={`block p-4 rounded-xl cursor-pointer transition-all duration-300 ${
+                                                    selectedTestTuru === test.id
+                                                        ? 'bg-purple-500 text-white'
+                                                        : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="testTuru"
+                                                    value={test.id}
+                                                    checked={selectedTestTuru === test.id}
+                                                    onChange={(e) => setSelectedTestTuru(e.target.value)}
+                                                    className="sr-only"
+                                                />
+                                                <div>
+                                                    <div className="font-medium text-lg">{test.name}</div>
+                                                    <div className="text-sm opacity-80">{test.desc}</div>
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={startTest}
+                                    disabled={!canStartTest()}
+                                    className={`w-full py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform ${
+                                        canStartTest()
+                                            ? 'bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-purple-600 text-white hover:scale-105 shadow-lg'
+                                            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-center space-x-2">
+                                        <Icon name="Play" className="w-6 h-6" />
+                                        <span>Testi Başlat</span>
+                                    </div>
+                                </button>
+
+                                {(selectedDers || selectedTestTuru) && (
+                                    <div className="mt-4 p-4 bg-white/5 rounded-xl">
+                                        <h3 className="text-white font-medium mb-2">Seçim Özeti:</h3>
+                                        <div className="text-sm text-gray-300 space-y-1">
+                                            {selectedTestTuru === 'lgs' ? (
+                                                <p>• <strong>Test Türü:</strong> Tam LGS Sınavı</p>
+                                            ) : (
+                                                <>
+                                                    {selectedDers && <p>• <strong>Ders:</strong> {selectedDers}</p>}
+                                                    {selectedKonular.length > 0 && (
+                                                        <p>• <strong>Konular:</strong> {selectedKonular.length} konu</p>
+                                                    )}
+                                                    {selectedTestTuru && (
+                                                        <p>• <strong>Test Türü:</strong> {testTurleri.find(t => t.id === selectedTestTuru)?.name}</p>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Statistics component
+        const Statistics = ({ testHistory, setTestHistory, onNavigate }) => {
+            const [userMaxCombo, setUserMaxCombo] = useState(0);
+
+            useEffect(() => {
+                // Kullanıcının rekorunu yükle
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                if (currentUser) {
+                    const userRecords = JSON.parse(localStorage.getItem('userRecords')) || {};
+                    const userRecord = userRecords[currentUser.id]?.maxCombo || 0;
+                    setUserMaxCombo(userRecord);
+                    console.log('Kombo rekoru yüklendi:', userRecord);
+                }
+            }, [testHistory]); // testHistory değiştiğinde de güncelle
+
+            // Veri dışa aktarma fonksiyonu
+            const exportData = () => {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                const userData = {
+                    user: currentUser,
+                    testHistory: testHistory,
+                    userRecords: JSON.parse(localStorage.getItem('userRecords')) || {},
+                    users: JSON.parse(localStorage.getItem('users')) || [],
+                    exportDate: new Date().toISOString(),
+                    version: '1.0'
+                };
+                
+                const dataStr = JSON.stringify(userData, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                // Dosya adını daha anlaşılır hale getir
+                const currentDate = new Date();
+                const dateStr = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
+                const timeStr = currentDate.toTimeString().substring(0,5).replace(':', '-'); // HH-MM
+                const userName = currentUser?.name?.replace(/[^a-zA-ZğüşöçıİĞÜŞÖÇ0-9]/g, '') || 'kullanici';
+                
+                const exportFileDefaultName = `LGS_Test_Yedek_${userName}_${dateStr}_${timeStr}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+                
+                // Daha bilgilendirici mesaj
+                alert(`Verileriniz başarıyla yedeklendi!\n\nDosya adı: ${exportFileDefaultName}\n\nDosya tarayıcınızın varsayılan "İndirilenler" klasörüne kaydedildi.\n\nBu dosyayı güvenli bir yerde saklayın ve gerektiğinde "Yükle" butonu ile geri yükleyebilirsiniz.`);
+            };
+
+            // Veri içe aktarma fonksiyonu
+            const importData = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const userData = JSON.parse(e.target.result);
+                            
+                            // Veri doğrulama
+                            if (!userData.version) {
+                                alert('Geçersiz yedek dosyası!');
+                                return;
+                            }
+                            
+                            // Test geçmişini geri yükle
+                            if (userData.testHistory && Array.isArray(userData.testHistory)) {
+                                setTestHistory(userData.testHistory);
+                                localStorage.setItem('testHistory', JSON.stringify(userData.testHistory));
+                                console.log('Test geçmişi yüklendi:', userData.testHistory.length, 'test');
+                            }
+                            
+                            // Diğer verileri geri yükle
+                            if (userData.userRecords) {
+                                localStorage.setItem('userRecords', JSON.stringify(userData.userRecords));
+                            }
+                            if (userData.users) {
+                                localStorage.setItem('users', JSON.stringify(userData.users));
+                            }
+                            
+                            alert(`Veriler başarıyla yüklendi!\n\n• Test geçmişi: ${userData.testHistory?.length || 0} test\n• Kullanıcı kayıtları: ${Object.keys(userData.userRecords || {}).length} kullanıcı\n• Yedek tarihi: ${new Date(userData.exportDate).toLocaleDateString('tr-TR')}`);
+                            
+                        } catch (error) {
+                            console.error('Import hatası:', error);
+                            alert('Dosya okuma hatası! Lütfen geçerli bir yedek dosyası seçin.');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+                event.target.value = ''; // Input'u temizle
+            };
+
+            // Net sayısını hesaplama fonksiyonu
+    const calculateNet = (correct, wrong) => {
+        return correct - (wrong * 0.25);
+    };
+
+    // Son testler tablosunu render et
+    const renderTestHistory = () => (
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 overflow-x-auto">
+            <h3 className="text-white font-semibold mb-4">Son Testler</h3>
+            {testHistory.length > 0 ? (
+                <table className="w-full text-sm text-left text-gray-200">
+                    <thead className="text-xs uppercase bg-white/5">
+                        <tr>
+                            <th className="px-4 py-3">Ders</th>
+                            <th className="px-4 py-3">Konular</th>
+                            <th className="px-4 py-3">Test Türü</th>
+                            <th className="px-4 py-3">Tarih</th>
+                            <th className="px-4 py-3 text-center">Doğru</th>
+                            <th className="px-4 py-3 text-center">Yanlış</th>
+                            <th className="px-4 py-3 text-center">Boş</th>
+                            <th className="px-4 py-3 text-center">Net</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {testHistory.map((test, index) => (
+                            <tr key={index} className="border-b border-white/10 hover:bg-white/5">
+                                <td className="px-4 py-3">{test.subject}</td>
+                                <td className="px-4 py-3">{test.topics?.join(', ') || '-'}</td>
+                                <td className="px-4 py-3">
+                                    {test.type === 'mini' && 'Mini Test'}
+                                    {test.type === 'kombo' && 'Kombo Test'}
+                                    {test.type === 'lgs' && 'LGS Testi'}
+                                </td>
+                                <td className="px-4 py-3">
+                                {/* test.date zaten formatlanmış string olarak geliyor, direkt göster */}
+                                {test.date}
+                            </td>
+
+                                <td className="px-4 py-3 text-center text-green-400">{test.correct}</td>
+                                <td className="px-4 py-3 text-center text-red-400">{test.wrong}</td>
+                                <td className="px-4 py-3 text-center text-gray-400">{test.empty}</td>
+                                <td className="px-4 py-3 text-center font-medium">
+                                    {calculateNet(test.correct, test.wrong).toFixed(2)}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            ) : (
+                <div className="text-center text-gray-400 py-8">
+                    <Icon name="BookOpen" className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>Henüz test geçmişi bulunmuyor.</p>
+                </div>
+            )}
+        </div>
+    );
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-cyan-900 via-blue-900 to-indigo-800 p-4">
+            <div className="max-w-6xl mx-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-3xl font-bold text-white">İstatistikler</h1>
+                    <div className="flex items-center space-x-3">
+                        {/* Veri Yönetimi Butonları */}
+                        <button
+                            onClick={exportData}
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-4 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2"
+                            title="Verilerini Yedekle"
+                        >
+                            <Icon name="Upload" className="w-4 h-4" />
+                            <span>Yedekle</span>
+                        </button>
+                        
+                        <label className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-4 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2 cursor-pointer"
+                               title="Yedek Dosyasını Yükle">
+                            <Icon name="Upload" className="w-4 h-4 rotate-180" />
+                            <span>Yükle</span>
+                            <input 
+                                type="file" 
+                                accept=".json" 
+                                onChange={importData} 
+                                className="hidden" 
+                            />
+                        </label>
+                        
+                        <button
+                            onClick={() => onNavigate('dashboard')}
+                            className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-4 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2"
+                        >
+                            <Icon name="Home" className="w-4 h-4" />
+                            <span>Ana Sayfa</span>
+                        </button>
+                    </div>
+                </div>
+                
+                {/* Kombo Rekoru Kartı */}
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-6">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            <div className="bg-gradient-to-r from-yellow-500 to-orange-500 p-3 rounded-lg">
+                                <Icon name="Trophy" className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h3 className="text-white font-semibold text-lg">Kombo Rekorum</h3>
+                                <p className="text-gray-300 text-sm">En uzun doğru cevap serisi</p>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-3xl font-bold text-yellow-400">{userMaxCombo}</div>
+                            <div className="text-gray-300 text-sm">soru</div>
+                        </div>
+                    </div>
+                </div>
+                
+                {/* Test Geçmişi */}
+                {renderTestHistory()}
+            </div>
+        </div>
+    );
+};
+        // Placeholder components for other test types
+        const MiniTest = ({ onNavigate, onTestComplete, loadedExcelData }) => {
+            const [currentQuestion, setCurrentQuestion] = useState(0);
+            const [selectedAnswer, setSelectedAnswer] = useState('');
+            const [questions, setQuestions] = useState([]);
+            const [testComplete, setTestComplete] = useState(false);
+            const [startTime, setStartTime] = useState(null); // Test başlangıç zamanı
+            const [results, setResults] = useState({
+                correct: 0,
+                wrong: 0,
+                empty: 0
+            });
+
+            // Test başlangıç zamanını ayarla
+            useEffect(() => {
+                setStartTime(new Date());
+            }, []);
+
+            useEffect(() => {
+                // Filtrelenmiş soruları localStorage'dan al
+                const filteredQuestions = JSON.parse(localStorage.getItem('filteredQuestions'));
+                
+                if (filteredQuestions && filteredQuestions.length > 0) {
+                    // Mini test için ilk 10 soruyu al
+                    const testQuestions = filteredQuestions
+                        .sort(() => Math.random() - 0.5) // Soruları karıştır
+                        .slice(0, 10);                    // İlk 10 soruyu al
+                    
+                    setQuestions(testQuestions);
+                    console.log('Mini Test soruları yüklendi:', {
+                        toplamSoru: testQuestions.length,
+                        ornekSoru: testQuestions[0]
+                    });
+                }
+            }, []);
+
+            const handleAnswerSelect = (answer) => {
+                setSelectedAnswer(answer);
+            };
+
+            const handleNextQuestion = () => {
+                // Cevabı kaydet ve sonraki soruya geç
+                if (selectedAnswer) {
+                    // Doğru cevabı kontrol et
+                    const correctAnswer = questions[currentQuestion].DogruCevap.toUpperCase();
+                    const isCorrect = selectedAnswer.toUpperCase() === correctAnswer;
+                    
+                    console.log('Seçilen cevap:', selectedAnswer);
+                    console.log('Doğru cevap:', correctAnswer);
+                    console.log('Doğru mu?', isCorrect);
+
+                    setResults(prev => ({
+                        ...prev,
+                        correct: isCorrect ? prev.correct + 1 : prev.correct,
+                        wrong: !isCorrect ? prev.wrong + 1 : prev.wrong
+                    }));
+                } else {
+                    setResults(prev => ({
+                        ...prev,
+                        empty: prev.empty + 1
+                    }));
+                }
+
+                if (currentQuestion < questions.length - 1) {
+                    setCurrentQuestion(prev => prev + 1);
+                    setSelectedAnswer('');
+                } else {
+                    setTestComplete(true);
+                }
+            };
+
+            // Soru gösterme fonksiyonu (her iki component'te de kullanılacak)
+            const renderQuestion = (question) => {
+                // Önce question objesini kontrol edelim
+                console.log('Soru objesi:', question);
+
+                // J sütunu kontrolü
+                console.log('J sütunu değeri:', question.Resimli);
+
+                // Eğer resim sorusu ise
+                if (question.Resimli === 'R') {
+                    // Resim yolu oluşturma
+                    const imagePath = `./${question.Ders.replace(/\s+/g, '')}/${question.Soru}`;
+                    console.log('Oluşturulan resim yolu:', imagePath);
+                    
+                    return (
+                        <div className="text-center mb-4">
+                            <img 
+                                src={imagePath}
+                                alt="Soru Resmi"
+                                className="max-w-full h-auto mx-auto rounded-lg shadow-lg"
+                                onLoad={() => console.log('Resim başarıyla yüklendi')}
+                                onError={(e) => {
+                                    console.error('Resim yüklenirken hata:', {
+                                        path: imagePath,
+                                        ders: question.Ders,
+                                        dosya: question.Soru,
+                                        error: e
+                                    });
+                                }}
+                            />
+                        </div>
+                    );
+                } else {
+                    console.log('Normal metin sorusu gösteriliyor:', question.Soru);
+                    return <p className="text-white text-lg mb-4">{question.Soru}</p>;
+                }
+            };
+
+            if (questions.length === 0) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-green-900 via-blue-900 to-purple-800 p-4">
+                        <div className="max-w-4xl mx-auto text-center">
+                            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8">
+                                <Icon name="AlertCircle" className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
+                                <h1 className="text-3xl font-bold text-white mb-4">Soru Bulunamadı</h1>
+                                <p className="text-gray-300 mb-6">Lütfen önce Excel dosyası yükleyin ve test parametrelerini seçin.</p>
+                                <div className="space-x-4">
+                                    <button
+                                        onClick={() => onNavigate('test-selection')}
+                                        className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-all duration-300"
+                                    >
+                                        ← Geri Dön
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (testComplete) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-green-900 via-blue-900 to-purple-800 p-4">
+                        <div className="max-w-4xl mx-auto text-center">
+                            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8">
+                                <Icon name="CheckCircle2" className="w-16 h-16 mx-auto mb-4 text-green-400" />
+                                <h1 className="text-3xl font-bold text-white mb-4">Test Tamamlandı!</h1>
+                                <div className="grid grid-cols-3 gap-4 mb-6">
+                                    <div className="bg-green-500/20 p-4 rounded-xl">
+                                        <div className="text-2xl font-bold text-green-400">{results.correct}</div>
+                                        <div className="text-green-200">Doğru</div>
+                                    </div>
+                                    <div className="bg-red-500/20 p-4 rounded-xl">
+                                        <div className="text-2xl font-bold text-red-400">{results.wrong}</div>
+                                        <div className="text-red-200">Yanlış</div>
+                                    </div>
+                                    <div className="bg-gray-500/20 p-4 rounded-xl">
+                                        <div className="text-2xl font-bold text-gray-400">{results.empty || 0}</div>
+                                        <div className="text-gray-200">Boş</div>
+                                    </div>
+                                </div>
+                                <div className="space-x-4">
+                                    <button
+                                        onClick={() => {
+                                            onTestComplete({
+                                                type: 'mini',  // 'kombo' yerine 'mini' olarak değiştirildi
+                                                subject: questions[0]?.Ders || 'Bilinmeyen',
+                                                topics: [...new Set(questions.map(q => q.Konu))],
+                                                date: startTime ? startTime.toLocaleString('tr-TR') : new Date().toLocaleString('tr-TR'), // Test başlangıç zamanını kullan
+                                                correct: results.correct,
+                                                wrong: results.wrong,
+                                                empty: results.empty
+                                            });
+                                            onNavigate('test-selection');
+                                        }}
+                                        className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-all duration-300"
+                                    >
+                                        Yeni Test
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            onTestComplete({
+                                                type: 'mini',  // 'kombo' yerine 'mini' olarak değiştirildi
+                                                subject: questions[0]?.Ders || 'Bilinmeyen',
+                                                topics: [...new Set(questions.map(q => q.Konu))],
+                                                date: startTime ? startTime.toLocaleString('tr-TR') : new Date().toLocaleString('tr-TR'), // Test başlangıç zamanını kullan
+                                                correct: results.correct,
+                                                wrong: results.wrong,
+                                                empty: results.empty
+                                            });
+                                            onNavigate('dashboard');
+                                        }}
+                                        className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-all duration-300"
+                                    >
+                                        Ana Sayfa
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-green-900 via-blue-900 to-purple-800 p-4">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8">
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="flex flex-col space-y-2">
+                                    <h1 className="text-2xl font-bold text-white">
+                                        Soru {currentQuestion + 1}/{questions.length}
+                                    </h1>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-gray-300">{questions[currentQuestion]?.Konu}</span>
+                                        <span className="text-gray-400">({questions[currentQuestion]?.Soru})</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => onNavigate('test-selection')}
+                                    className="bg-red-500/20 hover:bg-red-500/30 text-red-300 px-4 py-2 rounded-lg transition-all duration-300"
+                                >
+                                    Testi Bitir
+                                </button>
+                            </div>
+
+                            <div className="bg-white/5 rounded-xl p-6 mb-6">
+                                {renderQuestion(questions[currentQuestion])}
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {['A', 'B', 'C', 'D'].map((option) => (
+                                        <button
+                                            key={option}
+                                            onClick={() => handleAnswerSelect(option)}
+                                            className={`p-4 rounded-xl text-left transition-all duration-300 ${
+                                                selectedAnswer === option
+                                                    ? 'bg-indigo-500 text-white'
+                                                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                                            }`}
+                                        >
+                                            <span className="font-medium">{option})</span> {questions[currentQuestion][option]}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleNextQuestion}
+                                className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white py-4 rounded-xl font-semibold text-lg transition-all duration-300"
+                            >
+                                Sonraki Soru
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // KomboTest component'i
+        const KomboTest = ({ onNavigate, onTestComplete, loadedExcelData }) => {
+            const [currentQuestion, setCurrentQuestion] = useState(0);
+            const [selectedAnswer, setSelectedAnswer] = useState('');
+            const [questions, setQuestions] = useState([]);
+            const [testComplete, setTestComplete] = useState(false);
+            const [startTime, setStartTime] = useState(null); // Test başlangıç zamanı
+            const [results, setResults] = useState({
+                correct: 0,
+                wrong: 0,
+                empty: 0
+            });
+
+            // Test başlangıç zamanını ayarla
+            useEffect(() => {
+                setStartTime(new Date());
+            }, []);
+
+            useEffect(() => {
+                // Filtrelenmiş soruları localStorage'dan al
+                const filteredQuestions = JSON.parse(localStorage.getItem('filteredQuestions'));
+                
+                if (filteredQuestions && filteredQuestions.length > 0) {
+                    // Tüm soruları karışık olarak kullan
+                    const shuffledQuestions = filteredQuestions.sort(() => Math.random() - 0.5);
+                    setQuestions(shuffledQuestions);
+                }
+            }, []);
+
+            const handleAnswerSelect = (answer) => {
+                setSelectedAnswer(answer);
+            };
+
+            const handleNextQuestion = () => {
+                if (selectedAnswer) {
+                    const correctAnswer = questions[currentQuestion].DogruCevap.toUpperCase();
+                    const isCorrect = selectedAnswer.toUpperCase() === correctAnswer;
+
+                    if (isCorrect) {
+                        setResults(prev => ({
+                            ...prev,
+                            correct: prev.correct + 1
+                        }));
+                        setCurrentQuestion(prev => prev + 1);
+                    } else {
+                        setResults(prev => ({
+                            ...prev,
+                            wrong: prev.wrong + 1
+                        }));
+                        setTestComplete(true);
+                    }
+                    setSelectedAnswer('');
+                } else {
+                    setResults(prev => ({
+                        ...prev,
+                        empty: prev.empty + 1
+                    }));
+                    setTestComplete(true);
+                }
+            };
+
+            const renderQuestion = (question) => {
+                if (question.Resimli === 'R') {
+                    const imagePath = `./${question.Ders.replace(/\s+/g, '')}/${question.Soru}`;
+                    return (
+                        <div className="text-center mb-4">
+                            <img 
+                                src={imagePath}
+                                alt="Soru Resmi"
+                                className="max-w-full h-auto mx-auto rounded-lg shadow-lg"
+                            />
+                        </div>
+                    );
+                } else {
+                    return <p className="text-white text-lg mb-4">{question.Soru}</p>;
+                }
+            };
+
+            if (questions.length === 0) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 p-4">
+                        <div className="max-w-4xl mx-auto text-center">
+                            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8">
+                                <Icon name="AlertCircle" className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
+                                <h1 className="text-3xl font-bold text-white mb-4">Soru Bulunamadı</h1>
+                                <p className="text-gray-300 mb-6">Lütfen önce test parametrelerini seçin.</p>
+                                <button
+                                    onClick={() => onNavigate('test-selection')}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-all duration-300"
+                                >
+                                    ← Geri Dön
+                                </button>
+                                                       </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (testComplete) {
+                // Kombo rekoru kontrol et ve güncelle
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                const userRecords = JSON.parse(localStorage.getItem('userRecords')) || {};
+                const currentRecord = userRecords[currentUser?.id]?.maxCombo || 0;
+                const isNewRecord = results.correct > currentRecord;
+                
+                if (currentUser && isNewRecord) {
+                    userRecords[currentUser.id] = {
+                        ...userRecords[currentUser.id],
+                        maxCombo: results.correct,
+                        date: new Date().toISOString()
+                    };
+                    localStorage.setItem('userRecords', JSON.stringify(userRecords));
+                    console.log(`🎉 Yeni kombo rekoru! ${currentRecord} → ${results.correct}`);
+                }
+                
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 p-4">
+                        <div className="max-w-4xl mx-auto text-center">
+                            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8">
+                                <Icon name="CheckCircle2" className="w-16 h-16 mx-auto mb-4 text-green-400" />
+                                <h1 className="text-3xl font-bold text-white mb-4">
+                                    {isNewRecord && results.correct > 0 ? '🎉 Yeni Kombo Rekoru!' : 'Kombo Test Tamamlandı!'}
+                                </h1>
+                                {isNewRecord && results.correct > 0 && (
+                                    <p className="text-yellow-300 text-lg mb-4">
+                                        Eski rekor: {currentRecord} → Yeni rekor: {results.correct}
+                                    </p>
+                                )}
+                                <div className="grid grid-cols-3 gap-4 mb-6">
+                                    <div className="bg-green-500/20 p-4 rounded-xl">
+                                        <div className="text-2xl font-bold text-green-400">{results.correct}</div>
+                                        <div className="text-green-200">Doğru</div>
+                                    </div>
+                                    <div className="bg-red-500/20 p-4 rounded-xl">
+                                        <div className="text-2xl font-bold text-red-400">{results.wrong}</div>
+                                        <div className="text-red-200">Yanlış</div>
+                                    </div>
+                                    <div className="bg-gray-500/20 p-4 rounded-xl">
+                                        <div className="text-2xl font-bold text-gray-400">{results.empty || 0}</div>
+                                        <div className="text-gray-200">Boş</div>
+                                    </div>
+                                </div>
+                                <div className="space-x-4">
+                                    <button
+                                        onClick={() => {
+                                            onTestComplete({
+                                                type: 'kombo',
+                                                subject: questions[0]?.Ders || 'Bilinmeyen',
+                                                topics: [...new Set(questions.map(q => q.Konu))],
+                                                date: startTime ? startTime.toLocaleString('tr-TR') : new Date().toLocaleString('tr-TR'), // Test başlangıç zamanını kullan
+                                                correct: results.correct,
+                                                wrong: results.wrong,
+                                                empty: results.empty
+                                            });
+                                            onNavigate('test-selection');
+                                        }}
+                                        className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-all duration-300"
+                                    >
+                                        Yeni Test
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            onTestComplete({
+                                                type: 'kombo',
+                                                subject: questions[0]?.Ders || 'Bilinmeyen',
+                                                topics: [...new Set(questions.map(q => q.Konu))],
+                                                date: startTime ? startTime.toLocaleString('tr-TR') : new Date().toLocaleString('tr-TR'), // Test başlangıç zamanını kullan
+                                                correct: results.correct,
+                                                wrong: results.wrong,
+                                                empty: results.empty
+                                            });
+                                            onNavigate('dashboard');
+                                        }}
+                                        className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-all duration-300"
+                                    >
+                                        Ana Sayfa
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 p-4">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8">
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="flex flex-col space-y-2">
+                                    <h1 className="text-2xl font-bold text-white">
+                                        Soru {currentQuestion + 1}/{questions.length}
+                                    </h1>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-gray-300">{questions[currentQuestion]?.Konu}</span>
+                                        <span className="text-gray-400">({questions[currentQuestion]?.Soru})</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => onNavigate('test-selection')}
+                                    className="bg-red-500/20 hover:bg-red-500/30 text-red-300 px-4 py-2 rounded-lg transition-all duration-300"
+                                >
+                                    Testi Bitir
+                                </button>
+                            </div>
+
+                            <div className="bg-white/5 rounded-xl p-6 mb-6">
+                                {renderQuestion(questions[currentQuestion])}
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {['A', 'B', 'C', 'D'].map((option) => (
+                                        <button
+                                            key={option}
+                                            onClick={() => handleAnswerSelect(option)}
+                                            className={`p-4 rounded-xl text-left transition-all duration-300 ${
+                                                selectedAnswer === option
+                                                    ? 'bg-indigo-500 text-white'
+                                                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                                            }`}
+                                        >
+                                            <span className="font-medium">{option})</span> {questions[currentQuestion][option]}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleNextQuestion}
+                                className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white py-4 rounded-xl font-semibold text-lg transition-all duration-300"
+                            >
+                                Sonraki Soru
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // LGSTest component'i başlangıcı
+            const LGSTest = ({ onNavigate, onTestComplete, loadedExcelData }) => {
+            const [currentQuestion, setCurrentQuestion] = useState(0);
+            const [selectedAnswer, setSelectedAnswer] = useState('');
+            const [questions, setQuestions] = useState([]);
+            const [testComplete, setTestComplete] = useState(false);
+            const [startTime, setStartTime] = useState(null);
+            const [elapsedTime, setElapsedTime] = useState(0);
+            const [results, setResults] = useState({
+                correct: 0,
+                wrong: 0,
+                empty: 0
+            });
+
+            // Test başlangıç zamanını ayarla
+            useEffect(() => {
+                setStartTime(new Date());
+            }, []);
+
+            // Geçen süreyi hesapla
+            useEffect(() => {
+                if (startTime && !testComplete) {
+                    const timer = setInterval(() => {
+                        const now = new Date();
+                        setElapsedTime(Math.floor((now - startTime) / 1000));
+                    }, 1000);
+                    return () => clearInterval(timer);
+                }
+            }, [startTime, testComplete]);
+
+            // Süre formatını düzenle
+            const formatTime = (seconds) => {
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            // Kalan süreyi hesapla (135 dakika)
+            const getRemainingTime = () => {
+                const totalSeconds = 135 * 60; // 135 dakika = 8100 saniye
+                const remaining = totalSeconds - elapsedTime;
+                return remaining > 0 ? remaining : 0;
+            };
+
+            // Kalan süreyi dakika:saniye formatında döndür
+            const formatRemainingTime = () => {
+                const remainingSeconds = getRemainingTime();
+                const minutes = Math.floor(remainingSeconds / 60);
+                const seconds = remainingSeconds % 60;
+                return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            };
+
+            // Son 10 dakika kontrolü
+            const isLastTenMinutes = () => {
+                const remainingSeconds = getRemainingTime();
+                return remainingSeconds <= 600 && remainingSeconds > 0; // 600 saniye = 10 dakika
+            };
+
+            // Süre bittiğinde testi otomatik bitir
+            useEffect(() => {
+                if (getRemainingTime() === 0 && !testComplete) {
+                    setTestComplete(true);
+                    console.log('LGS Test süresi doldu, test otomatik tamamlandı');
+                }
+            }, [elapsedTime, testComplete]);
+
+    // Test başlama saatini formatla
+    const getStartTimeString = () => {
+        return startTime ? startTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '';
+    };
+
+            useEffect(() => {
+                // LGS Test için tam Excel verisini kullan, filtre uygulama
+                const excelData = JSON.parse(localStorage.getItem('excelData'));
+                
+                if (excelData && excelData.length > 0) {
+                    // Tüm soruları karışık olarak kullan (filtresiz)
+                    const shuffledQuestions = excelData.sort(() => Math.random() - 0.5);
+                    setQuestions(shuffledQuestions);
+                    console.log('LGS Test soruları yüklendi:', {
+                        toplamSoru: shuffledQuestions.length,
+                        ornekSoru: shuffledQuestions[0]
+                    });
+                }
+            }, []);
+
+            const handleAnswerSelect = (answer) => {
+                setSelectedAnswer(answer);
+            };
+
+            const handleNextQuestion = () => {
+                // Cevabı kaydet ve sonraki soruya geç
+                if (selectedAnswer) {
+                    // Doğru cevabı kontrol et
+                    const correctAnswer = questions[currentQuestion].DogruCevap.toUpperCase();
+                    const isCorrect = selectedAnswer.toUpperCase() === correctAnswer;
+                    
+                    setResults(prev => ({
+                        ...prev,
+                        correct: isCorrect ? prev.correct + 1 : prev.correct,
+                        wrong: !isCorrect ? prev.wrong + 1 : prev.wrong
+                    }));
+                } else {
+                    setResults(prev => ({
+                        ...prev,
+                        empty: prev.empty + 1
+                    }));
+                }
+
+                // Sonraki soruya geç veya testi bitir
+                if (currentQuestion < questions.length - 1) {
+                    setCurrentQuestion(prev => prev + 1);
+                    setSelectedAnswer('');
+                } else {
+                    setTestComplete(true);
+                }
+            };
+
+            const renderQuestion = (question) => {
+                if (question.Resimli === 'R') {
+                    const imagePath = `./${question.Ders.replace(/\s+/g, '')}/${question.Soru}`;
+                    return (
+                        <div className="text-center mb-4">
+                            <img 
+                                src={imagePath}
+                                alt="Soru Resmi"
+                                className="max-w-full h-auto mx-auto rounded-lg shadow-lg"
+                            />
+                        </div>
+                    );
+                } else {
+                    return <p className="text-white text-lg mb-4">{question.Soru}</p>;
+                }
+            };
+
+            if (questions.length === 0) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 p-4">
+                        <div className="max-w-4xl mx-auto text-center">
+                            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8">
+                                <Icon name="AlertCircle" className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
+                                <h1 className="text-3xl font-bold text-white mb-4">Soru Bulunamadı</h1>
+                                <p className="text-gray-300 mb-6">Lütfen önce test parametrelerini seçin.</p>
+                                <button
+                                    onClick={() => onNavigate('test-selection')}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-all duration-300"
+                                >
+                                    ← Geri Dön
+                                </button>
+                                                       </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (testComplete) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 p-4">
+                        <div className="max-w-4xl mx-auto text-center">
+                            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8">
+                                <Icon name="CheckCircle2" className="w-16 h-16 mx-auto mb-4 text-green-400" />
+                                <h1 className="text-3xl font-bold text-white mb-4">Test Tamamlandı!</h1>
+                                <div className="grid grid-cols-3 gap-4 mb-6">
+                                    <div className="bg-green-500/20 p-4 rounded-xl">
+                                        <div className="text-2xl font-bold text-green-400">{results.correct}</div>
+                                        <div className="text-green-200">Doğru</div>
+                                    </div>
+                                    <div className="bg-red-500/20 p-4 rounded-xl">
+                                        <div className="text-2xl font-bold text-red-400">{results.wrong}</div>
+                                        <div className="text-red-200">Yanlış</div>
+                                    </div>
+                                    <div className="bg-gray-500/20 p-4 rounded-xl">
+                                        <div className="text-2xl font-bold text-gray-400">{results.empty || 0}</div>
+                                        <div className="text-gray-200">Boş</div>
+                                    </div>
+                                </div>
+                                <div className="space-x-4">
+                                    <button
+                                        onClick={() => {
+                                            onTestComplete({
+                                                type: 'lgs',
+                                                subject: questions[0]?.Ders || 'Bilinmeyen',
+                                                topics: [...new Set(questions.map(q => q.Konu))],
+                                                date: startTime ? startTime.toLocaleString('tr-TR') : new Date().toLocaleString('tr-TR'), // Test başlangıç zamanını kullan
+                                                correct: results.correct,
+                                                wrong: results.wrong,
+                                                empty: results.empty
+                                            });
+                                            onNavigate('test-selection');
+                                        }}
+                                        className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-all duration-300"
+                                    >
+                                        Yeni Test
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            onTestComplete({
+                                                type: 'lgs',
+                                                subject: questions[0]?.Ders || 'Bilinmeyen',
+                                                topics: [...new Set(questions.map(q => q.Konu))],
+                                                date: startTime ? startTime.toLocaleString('tr-TR') : new Date().toLocaleString('tr-TR'), // Test başlangıç zamanını kullan
+                                                correct: results.correct,
+                                                wrong: results.wrong,
+                                                empty: results.empty
+                                            });
+                                            onNavigate('dashboard');
+                                        }}
+                                        className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-all duration-300"
+                                    >
+                                        Ana Sayfa
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 p-4">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8">
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="flex flex-col space-y-2">
+                                    <h1 className="text-2xl font-bold text-white">
+                                        Soru {currentQuestion + 1}/{questions.length}
+                                    </h1>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-gray-300">{questions[currentQuestion]?.Konu}</span>
+                                        <span className="text-gray-400">({questions[currentQuestion]?.Soru})</span>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-center space-x-4">
+                                    {/* LGS Geri Sayım Sayacı */}
+                                    <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                                        isLastTenMinutes() 
+                                            ? 'bg-red-500/20 border border-red-400 animate-pulse' 
+                                            : 'bg-blue-500/20 border border-blue-400'
+                                    }`}>
+                                        <Icon name="Clock" className={`w-5 h-5 ${
+                                            isLastTenMinutes() ? 'text-red-400' : 'text-blue-400'
+                                        }`} />
+                                        <span className={`font-mono text-lg font-bold ${
+                                            isLastTenMinutes() ? 'text-red-400' : 'text-blue-400'
+                                        }`}>
+                                            {formatRemainingTime()}
+                                        </span>
+                                        <span className={`text-sm ${
+                                            isLastTenMinutes() ? 'text-red-300' : 'text-blue-300'
+                                        }`}>
+                                            kalan
+                                        </span>
+                                    </div>
+                                    
+                                    <button
+                                        onClick={() => onNavigate('test-selection')}
+                                        className="bg-red-500/20 hover:bg-red-500/30 text-red-300 px-4 py-2 rounded-lg transition-all duration-300"
+                                    >
+                                        Testi Bitir
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="bg-white/5 rounded-xl p-6 mb-6">
+                                {renderQuestion(questions[currentQuestion])}
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {['A', 'B', 'C', 'D'].map((option) => (
+                                        <button
+                                            key={option}
+                                            onClick={() => handleAnswerSelect(option)}
+                                            className={`p-4 rounded-xl text-left transition-all duration-300 ${
+                                                selectedAnswer === option
+                                                    ? 'bg-indigo-500 text-white'
+                                                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                                            }`}
+                                        >
+                                            <span className="font-medium">{option})</span> {questions[currentQuestion][option]}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleNextQuestion}
+                                className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white py-4 rounded-xl font-semibold text-lg transition-all duration-300"
+                            >
+                                Sonraki Soru
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Render the main app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<LGSApp />);
+    </script>
+</body>
+</html>

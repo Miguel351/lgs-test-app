@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel OCR Soru İşleyici</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+        
+        .main-content {
+            padding: 40px;
+        }
+        
+        .step {
+            margin-bottom: 40px;
+            padding: 30px;
+            border: 2px dashed #e0e0e0;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active {
+            border-color: #667eea;
+            background: #f8f9ff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+        }
+        
+        .step.completed {
+            border-color: #27ae60;
+            background: #f8fff8;
+        }
+        
+        .step-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 40px;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        
+        .step.completed .step-number {
+            background: #27ae60;
+        }
+        
+        .step-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            border: none;
+            font-size: 1.1em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .file-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .file-upload input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .drop-zone {
+            border: 3px dashed #ccc;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            background: #fafafa;
+            transition: all 0.3s ease;
+        }
+        
+        .drop-zone.dragover {
+            border-color: #667eea;
+            background: #f0f4ff;
+            transform: scale(1.02);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+        
+        .excel-preview {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow: auto;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .excel-preview table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        
+        .excel-preview th,
+        .excel-preview td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .excel-preview th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        .excel-preview .highlight {
+            background: #fff3cd;
+            font-weight: bold;
+        }
+        
+        .process-btn {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+        }
+        
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+        }
+        
+        .process-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .results {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Excel OCR Soru İşleyici</h1>
+            <p>Excel dosyanıza resim ve PDF'lerden çıkardığınız soruları otomatik olarak ekleyin</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- Adım 1: Excel Yükleme -->
+            <div class="step active" id="step1">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    Excel Dosyanızı Yükleyin
+                </div>
+                <p style="margin-bottom: 20px;">Önce sorularınızı ekleyeceğiniz Excel dosyasını seçin. D kolonundaki boş hücrelere yeni sorular eklenecek.</p>
+                
+                <label class="file-upload">
+                    📁 Excel Dosyası Seç (.xlsx, .xls)
+                    <input type="file" id="excelFile" accept=".xlsx,.xls" />
+                </label>
+                
+                <div id="excelStatus"></div>
+                <div id="excelPreview" class="excel-preview" style="display: none;"></div>
+            </div>
+            
+            <!-- Adım 2: Kaynak Dosya Yükleme -->
+            <div class="step" id="step2">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    Kaynak Dosyayı Yükleyin
+                </div>
+                <p style="margin-bottom: 20px;">Soruların bulunduğu resim veya PDF dosyasını yükleyin. Metinler otomatik olarak çıkarılacak.</p>
+                
+                <div class="drop-zone" id="dropZone">
+                    <p>📄 Dosyayı buraya sürükleyin veya tıklayarak seçin</p>
+                    <p style="font-size: 0.9em; opacity: 0.7; margin-top: 10px;">
+                        Desteklenen formatlar: PNG, JPG, JPEG, GIF, WebP, PDF
+                    </p>
+                    <input type="file" id="sourceFile" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf" style="display: none;" />
+                </div>
+                
+                <div id="sourceStatus"></div>
+                <div class="loading" id="ocrLoading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px;">Metin çıkarılıyor, lütfen bekleyin...</p>
+                </div>
+            </div>
+            
+            <!-- Adım 3: İşleme ve Sonuç -->
+            <div class="step" id="step3">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    Soruları İşleyin
+                </div>
+                <p style="margin-bottom: 20px;">Çıkarılan metinler Excel dosyanıza D kolonuna eklenecek.</p>
+                
+                <button class="process-btn" id="processBtn" disabled>
+                    🔄 Soruları Excel'e Ekle
+                </button>
+                
+                <div id="processStatus"></div>
+                <div id="results" class="results" style="display: none;">
+                    <h3>📈 İşlem Tamamlandı!</h3>
+                    <p id="resultSummary"></p>
+                    <a href="#" id="downloadBtn" class="download-btn" style="display: none;">
+                        💾 Güncellenmiş Excel'i İndir
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let excelData = null;
+        let excelWorkbook = null;
+        let extractedText = '';
+        let excelFileName = '';
+
+        // PDF.js konfigürasyonu
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // Excel dosyası yükleme
+        document.getElementById('excelFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                excelFileName = file.name;
+                loadExcelFile(file);
+            }
+        });
+
+        // Kaynak dosya yükleme (drag & drop)
+        const dropZone = document.getElementById('dropZone');
+        const sourceFile = document.getElementById('sourceFile');
+
+        dropZone.addEventListener('click', () => sourceFile.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                processSourceFile(file);
+            }
+        });
+
+        sourceFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                processSourceFile(file);
+            }
+        });
+
+        // İşlem butonu
+        document.getElementById('processBtn').addEventListener('click', processQuestions);
+
+        async function loadExcelFile(file) {
+            try {
+                showStatus('excelStatus', 'Excel dosyası yükleniyor...', 'info');
+                
+                const data = await file.arrayBuffer();
+                excelWorkbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = excelWorkbook.Sheets[excelWorkbook.SheetNames[0]];
+                excelData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+                
+                showExcelPreview();
+                showStatus('excelStatus', `✅ Excel dosyası başarıyla yüklendi! (${excelData.length} satır)`, 'success');
+                
+                // Adım 1 tamamlandı
+                document.getElementById('step1').classList.remove('active');
+                document.getElementById('step1').classList.add('completed');
+                document.getElementById('step2').classList.add('active');
+                
+                checkReadiness();
+            } catch (error) {
+                showStatus('excelStatus', '❌ Excel dosyası yüklenirken hata oluştu: ' + error.message, 'error');
+            }
+        }
+
+        function showExcelPreview() {
+            const preview = document.getElementById('excelPreview');
+            let html = '<h4>📋 Excel Önizleme (İlk 10 satır)</h4><table>';
+            
+            // Başlık satırı
+            if (excelData.length > 0) {
+                html += '<tr>';
+                const maxCols = Math.max(...excelData.map(row => row.length));
+                for (let i = 0; i < Math.min(maxCols, 10); i++) {
+                    const colName = String.fromCharCode(65 + i); // A, B, C, D...
+                    html += `<th>${colName}</th>`;
+                }
+                html += '</tr>';
+                
+                // Veri satırları
+                for (let i = 0; i < Math.min(excelData.length, 10); i++) {
+                    html += '<tr>';
+                    for (let j = 0; j < Math.min(maxCols, 10); j++) {
+                        const cellValue = excelData[i][j] || '';
+                        const className = (j === 3 && i >= 1) ? 'highlight' : ''; // D kolonu (index 3)
+                        html += `<td class="${className}">${cellValue}</td>`;
+                    }
+                    html += '</tr>';
+                }
+            }
+            
+            html += '</table>';
+            preview.innerHTML = html;
+            preview.style.display = 'block';
+        }
+
+        async function processSourceFile(file) {
+            try {
+                showStatus('sourceStatus', 'Dosya işleniyor...', 'info');
+                document.getElementById('ocrLoading').style.display = 'block';
+                
+                if (file.type === 'application/pdf') {
+                    extractedText = await extractTextFromPDF(file);
+                } else if (file.type.startsWith('image/')) {
+                    extractedText = await extractTextFromImage(file);
+                } else {
+                    throw new Error('Desteklenmeyen dosya türü');
+                }
+                
+                if (extractedText.trim()) {
+                    showStatus('sourceStatus', `✅ Metin başarıyla çıkarıldı! (${extractedText.length} karakter)`, 'success');
+                    showStatus('sourceStatus', `<div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-family: monospace; font-size: 0.9em; max-height: 150px; overflow-y: auto;">${extractedText.substring(0, 500)}${extractedText.length > 500 ? '...' : ''}</div>`, 'info');
+                } else {
+                    showStatus('sourceStatus', '⚠️ Dosyadan metin çıkarılamadı. Lütfen farklı bir dosya deneyin.', 'error');
+                }
+                
+                document.getElementById('ocrLoading').style.display = 'none';
+                
+                // Adım 2 tamamlandı
+                document.getElementById('step2').classList.remove('active');
+                document.getElementById('step2').classList.add('completed');
+                document.getElementById('step3').classList.add('active');
+                
+                checkReadiness();
+            } catch (error) {
+                document.getElementById('ocrLoading').style.display = 'none';
+                showStatus('sourceStatus', '❌ Dosya işlenirken hata oluştu: ' + error.message, 'error');
+            }
+        }
+
+        async function extractTextFromImage(file) {
+            const result = await Tesseract.recognize(file, 'tur+eng');
+            return result.data.text;
+        }
+
+        async function extractTextFromPDF(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = '';
+            
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
+            }
+            
+            return fullText;
+        }
+
+        function checkReadiness() {
+            const processBtn = document.getElementById('processBtn');
+            if (excelData && extractedText.trim()) {
+                processBtn.disabled = false;
+            }
+        }
+
+        function processQuestions() {
+            try {
+                showStatus('processStatus', 'Sorular Excel\'e ekleniyor...', 'info');
+                
+                // Metni satırlara böl ve boş olmayan satırları al
+                const questions = extractedText.split('\n')
+                    .map(q => q.trim())
+                    .filter(q => q.length > 0 && q.length > 10); // En az 10 karakter olan satırları al
+                
+                if (questions.length === 0) {
+                    showStatus('processStatus', '❌ Çıkarılan metinden uygun sorular bulunamadı.', 'error');
+                    return;
+                }
+                
+                // D kolonundaki ilk boş hücreyi bul (D2'den başla - index 1, kolon 3)
+                let insertRow = 1; // D2 (0-based index)
+                for (let i = 1; i < excelData.length; i++) {
+                    if (!excelData[i][3] || excelData[i][3].toString().trim() === '') {
+                        insertRow = i;
+                        break;
+                    }
+                }
+                
+                // Yeterli satır yoksa yeni satırlar ekle
+                while (excelData.length <= insertRow + questions.length) {
+                    excelData.push([]);
+                }
+                
+                // Soruları D kolonuna ekle
+                let addedCount = 0;
+                for (let i = 0; i < questions.length; i++) {
+                    const rowIndex = insertRow + i;
+                    // Satır yeterince uzun değilse genişlet
+                    while (excelData[rowIndex].length < 4) {
+                        excelData[rowIndex].push('');
+                    }
+                    excelData[rowIndex][3] = questions[i]; // D kolonu (index 3)
+                    addedCount++;
+                }
+                
+                // Excel dosyasını güncelle
+                const newWorksheet = XLSX.utils.aoa_to_sheet(excelData);
+                excelWorkbook.Sheets[excelWorkbook.SheetNames[0]] = newWorksheet;
+                
+                showStatus('processStatus', `✅ ${addedCount} soru başarıyla D kolonuna eklendi!`, 'success');
+                
+                // Sonuçları göster
+                const results = document.getElementById('results');
+                const summary = document.getElementById('resultSummary');
+                const downloadBtn = document.getElementById('downloadBtn');
+                
+                summary.innerHTML = `
+                    <strong>📊 İşlem Özeti:</strong><br>
+                    • Eklenen soru sayısı: ${addedCount}<br>
+                    • Başlangıç satırı: D${insertRow + 1}<br>
+                    • Bitiş satırı: D${insertRow + addedCount}
+                `;
+                
+                // İndir butonunu hazırla
+                const wbout = XLSX.write(excelWorkbook, { bookType: 'xlsx', type: 'array' });
+                const blob = new Blob([wbout], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                
+                downloadBtn.href = url;
+                downloadBtn.download = `güncellenmiş_${excelFileName}`;
+                downloadBtn.style.display = 'inline-block';
+                
+                results.style.display = 'block';
+                
+                // Excel önizlemesini güncelle
+                showExcelPreview();
+                
+            } catch (error) {
+                showStatus('processStatus', '❌ İşlem sırasında hata oluştu: ' + error.message, 'error');
+            }
+        }
+
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+    </script>
+</body>
+</html>

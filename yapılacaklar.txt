@@ -1,0 +1,41 @@
+- tek bir excel dosyası ile tüm derslere sorular???
+
+- Ders bazında filtreleme
+- Tarih aralığına göre filtreleme (Son 7 gün, Son 30 gün, vs.)
+- Test türüne göre filtreleme (Mini Test, Kombo, LGS)
+- Tarihe göre sıralama (Yeniden eskiye/Eskiden yeniye)
+- Puana göre sıralama (Yüksekten düşüğe/Düşükten yükseğe)
+- Net sayısına göre sıralama
+- Her test için doğru/yanlış/boş analizi
+- Konu bazında başarı oranları
+- Harcanan süre analizi
+- Yanlış yapılan soruların tekrar çözümü
+- Başarı grafiği (Zaman içindeki ilerleme)
+- Konu bazında performans radar grafiği
+- Doğru/yanlış oranları pasta grafiği
+- Test süre kullanımı çubuk grafiği
+- Test sonuçlarını PDF olarak kaydetme
+- Excel'e aktarma
+- Yazdırma seçeneği
+- Test sonrası notlar ekleme
+- Önemli soruları işaretleme
+- Tekrar edilmesi gereken konuları listeleme
+- Sayfa başına gösterilecek test sayısını ayarlama
+- Liste/Grid görünümü seçeneği
+- Detaylı/Özet görünüm seçenekleri
+- Haftalık/aylık test hedefi belirleme
+- Hedeflere ulaşma durumu
+- İlerleme bildirimleri
+- Test sonuçlarını paylaşma
+- Arkadaş listesi oluşturma
+- Başarı rozetleri/ödüller
+
+İstatistikler için:
+Filtreleme özelliklerini eklemek
+Sıralama seçenekleri eklemek
+
+// Browser console'da çalıştırın:
+localStorage.clear();
+
+--------------------
+
